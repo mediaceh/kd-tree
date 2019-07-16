@@ -248,7 +248,7 @@ class FaceFinder {
     * @param String $host
     * @param String $user
     * @param String $password
-    * @return resource or null
+    * @return mysqli
     */
     protected function connect(string $host,string $user,string $password): mysqli {
         return new mysqli($host, $user, $password);
