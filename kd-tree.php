@@ -218,8 +218,7 @@ class FaceFinder {
     * Removes all faces in DB
     */
     public function flush(): void {
-        $this->mysql->query("DELETE FROM `faces` WHERE 1");
-        $this->mysql->query("ALTER TABLE `faces` AUTO_INCREMENT = 1");
+        $this->mysql->query("TRUNCATE `faces`");
         $this->clearData();
         $this->destroyTree();
     }
