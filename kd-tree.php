@@ -176,7 +176,6 @@ class FaceFinder {
     protected $outerRadius;
     protected $innerRadius;
     protected $nodePoint;
-    protected $points;
     protected $queue;
     protected $radiuses;
     protected $pointsInLeaf;
