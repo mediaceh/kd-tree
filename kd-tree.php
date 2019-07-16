@@ -316,7 +316,7 @@ class FaceFinder {
     */
     protected function buildTree(): void {
         #если нам не хватает на корень и два листа - не будем ничего строить
-        if(count($this->data) < (self::MIN_POINTS + 3)) {
+        if(count($this->data) < (self::MIN_POINTS*2 + 3)) {
             $this->tree = null;
         } else {
             $this->tree = $this->buildTreeRecursive(0,0,count($this->data)-1);
@@ -371,9 +371,11 @@ class FaceFinder {
         }
         $face = new Face($this->data[$mid][1],$this->data[$mid][2],$this->data[$mid][3],$this->data[$mid][0]);
         $dim = $dim % self::DIM_COUNT;
+        #если мы имеет необходимое количество точек для каждого листа, то можем разбиваться дальше
         if((($mid-$left) > self::MIN_POINTS) && (($right-$mid) > self::MIN_POINTS)) {
             $face->setLeft($this->buildTreeRecursive($dim,$left,$mid-1));
             $face->setRight($this->buildTreeRecursive($dim,$mid+1,$right));
+        #иначе кидаем все точки в лист
         } else {
             for($i = $left; $i <= $right; $i++) {
                 $face->addPoint(new Face($this->data[$i][1],$this->data[$i][2],$this->data[$i][3],$this->data[$i][0]));
@@ -560,7 +562,7 @@ class FaceFinder {
                         $point = $queueData['data'];
                         #если наша точка оказалась между двумя радиусами
                         #то можно заменить внешний радиус на нее ничего не потеряв
-                        if(($this->innerRadius != 0) && ($dist > $this->innerRadius) && ($dist < $this->outerRadius)) {
+                        if(($dist > $this->innerRadius) && ($dist < $this->outerRadius)) {
                             $this->outerRadius = $dist;
                             $this->outerNode = $point;
                         #если наша точка оказалась за внутренним радиусом
@@ -585,7 +587,7 @@ class FaceFinder {
                         #если радиусов больше нет, но внутренний радиус по прежнему не равен нулю,
                         #и наша точка оказалась за внутренним радиусом
                         #то надо сбросить его на ноль
-                        } else if(($this->innerRadius != 0) && ($dist < $this->innerRadius)) {
+                        } else if($dist < $this->innerRadius) {
                             $this->outerRadius = $this->innerRadius;
                             $this->outerNode = $this->innerNode;
                             $this->innerRadius = 0;
