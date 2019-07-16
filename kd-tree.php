@@ -526,8 +526,10 @@ class FaceFinder {
                 $this->innerNode = $queueData['data'];
             } else {
                 #данный код может быть немного улучшен, но на это нет времени
+                #улучшения касаются того, что мы можем набрать лишних радиусов
+                #вместо того, что бы сужать поиск
                 #если мы оказались в другом листе
-                #переберем все точки
+                #переберем все точки включая точку разбиения
                 $tree->addPoint($this->nodePoint);
                 foreach($tree->getPoints() as $point) {
                     $dist = $this->calculateDist($point);
