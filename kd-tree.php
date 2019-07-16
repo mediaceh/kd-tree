@@ -182,7 +182,7 @@ class FaceFinder {
     protected $pointsInLeaf;
     protected $mysql;
     const MIN_POINTS = 4;
-    const LIMIT = 4605;
+    const LIMIT = 10000;
     const DIM_COUNT = 3;
     /**
     * Construct FaceFinder.
@@ -190,7 +190,7 @@ class FaceFinder {
     * @param String $user
     * @param String $password
     */        
-    public function __construct(string $host = 'localhost',string $user = 'root',string $password = 'X1LfkvrYvFGZ') {
+    public function __construct(string $host = 'localhost',string $user = 'root',string $password = '') {
         $this->mysql = $this->connect($host,$user,$password);
         $this->createDB();
         $this->selectDB();
