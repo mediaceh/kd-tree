@@ -470,7 +470,7 @@ class FaceFinder {
             $return[] = $this->face;
         }
         #вернем пять последних элементов в обратном порядке
-        return array_reverse(array_slice($return, -5));
+        return array_reverse(array_slice($return, -(self::MIN_POINTS+1)));
     }
 
     /**
