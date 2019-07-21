@@ -191,9 +191,7 @@ class FaceFinder {
     */        
     public function __construct(string $host = 'localhost',string $user = 'root',string $password = '') {
         $this->mysql = $this->connect($host,$user,$password);
-        $this->createDB();
-        $this->selectDB();
-        $this->createTable();
+        $this->prepareDB();
         $this->data = $this->loadData();
         $this->buildTree();
     }
@@ -253,30 +251,22 @@ class FaceFinder {
         return new mysqli($host, $user, $password);
     }
     
-    /**
-    * Create db.
-    */
-    protected function createDB(): void {
-        $this->mysql->query("CREATE DATABASE IF NOT EXISTS `face_finder` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci");
-    }
-
-    /**
-    * Select db.
-    */
-    protected function selectDB(): void {
-        $this->mysql->select_db("face_finder");
-    }
-
-    /**
-    * Create table.
-    */
-    protected function createTable(): void {
-        $this->mysql->query("CREATE TABLE IF NOT EXISTS `faces` (
-            `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            `race` tinyint(4) NOT NULL,
-            `emotion` smallint(6) NOT NULL,
-            `oldness` smallint(6) NOT NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+	/**
+	* Prepare db.
+	*/	
+    protected function prepareDB(): void {
+        $this->mysql->multi_query("
+            CREATE DATABASE IF NOT EXISTS `face_finder` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+            USE `face_finder`;
+            CREATE TABLE IF NOT EXISTS `faces` (
+                `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                `race` tinyint(4) NOT NULL,
+                `emotion` smallint(6) NOT NULL,
+                `oldness` smallint(6) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+        while ($this->mysql->next_result()) {
+        }
     }
 
     /**
