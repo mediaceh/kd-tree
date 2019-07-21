@@ -251,9 +251,9 @@ class FaceFinder {
         return new mysqli($host, $user, $password);
     }
     
-	/**
-	* Prepare db.
-	*/	
+    /**
+    * Prepare db.
+    */	
     protected function prepareDB(): void {
         $this->mysql->multi_query("
             CREATE DATABASE IF NOT EXISTS `face_finder` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
