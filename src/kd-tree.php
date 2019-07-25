@@ -496,95 +496,27 @@ class FaceFinder {
                 $this->getNearestNeighborRecursive($second,$dim%self::DIM_COUNT);
             }
         } else {
-            #если мы первый раз оказались в листе
-            #то нам нужно установить внутренний и внешний радиусы
-            #а так же запомнить оставшиеся что бы переходить на них
             if(!$this->outerRadius) {
                 foreach($tree->getPoints() as $point) {
                     $dist = $this->calculateDist($point);
-                    $this->radiuses->insert($point,$dist);
                     $this->queue->insert($point,$dist);
                 }
-                while($this->radiuses->count() > self::MIN_POINTS) {
-                    $queueData = $this->radiuses->extract();    
+                while($this->queue->count() > self::MIN_POINTS) {
+                    $queueData = $this->queue->extract();
                 }
                 $this->outerRadius = $queueData['priority'];
-                $this->outerNode = $queueData['data'];
-                $queueData = $this->radiuses->extract();    
-                $this->innerRadius = $queueData['priority'];
-                $this->innerNode = $queueData['data'];
+                $this->outerNode = $queueData['data'];	
             } else {
-                #данный код может быть немного улучшен, но на это нет времени
-                #улучшения касаются того, что мы можем набрать лишних радиусов
-                #вместо того, что бы сужать поиск
-                #если мы оказались в другом листе
-                #переберем все точки включая точку разбиения
                 $tree->addPoint($this->nodePoint);
                 foreach($tree->getPoints() as $point) {
                     $dist = $this->calculateDist($point);
                     if($dist < $this->outerRadius) {
-                        #если внутренний радиус равен нулю
-                        #значит мы не можем сужать поиск
-                        #пробуем набрать необходимое количество точек внутри радиуса
-                        #что бы иметь возможность установить внутренний радиус и сузить поиск
-                        if($this->innerRadius == 0) {
-                            $this->radiuses->insert($point,$dist);
-                        } else {
-                            $this->pointsInLeaf->insert($point,$dist);
-                        }
                         $this->queue->insert($point,$dist);
+                        $queueData = $this->queue->extract();
+                        $this->outerRadius = $queueData['priority'];
+                        $this->outerNode = $queueData['data'];
                     }
                 }
-                #если мы набрали необходимое количество точек
-                #то мы можем установить внутренний радиус
-                if(($this->innerRadius == 0) && ($this->radiuses->count() >= self::MIN_POINTS)) {
-                    $queueData = $this->radiuses->extract();    
-                    $this->innerRadius = $queueData['priority'];
-                    $this->innerNode = $queueData['data'];
-
-                #если внутренний радиус не равен нулю
-                #то мы имеем возможность сузить поиск
-                } else if($this->innerRadius != 0) {
-                    #начинаем с худших точек
-                    while($this->pointsInLeaf->count()) {
-                        $queueData = $this->pointsInLeaf->extract();    
-                        $dist = $queueData['priority'];
-                        $point = $queueData['data'];
-                        #если наша точка оказалась между двумя радиусами
-                        #то можно заменить внешний радиус на нее ничего не потеряв
-                        if(($dist > $this->innerRadius) && ($dist < $this->outerRadius)) {
-                            $this->outerRadius = $dist;
-                            $this->outerNode = $point;
-                        #если наша точка оказалась за внутренним радиусом
-                        #то во первых нам надо проверить есть ли у нас еще радиусы для улучшения
-                        } else if($this->radiuses->count() && ($dist < $this->innerRadius)) {
-                            $this->outerRadius = $this->innerRadius;
-                            $this->outerNode = $this->innerNode;
-                            $queueData = $this->radiuses->extract();    
-                            #если радиусы есть, но наш следующий радиус находится за точкой
-                            #то нам нужно установить эту точку в качестве внутреннего радиуса
-                            #и вернуть наш радиус о очередь
-                            #иначе мы потеряем возможные лучшие варианты
-                            if($queueData['priority'] < $dist) {
-                                $this->innerRadius = $dist;
-                                $this->innerNode = $point;
-                                $this->radiuses->insert($queueData['data'],$queueData['priority']);
-                            #иначе все ок
-                            } else {
-                                $this->innerRadius = $queueData['priority'];
-                                $this->innerNode = $queueData['data'];
-                            }
-                        #если радиусов больше нет, но внутренний радиус по прежнему не равен нулю,
-                        #и наша точка оказалась за внутренним радиусом
-                        #то надо сбросить его на ноль
-                        } else if($dist < $this->innerRadius) {
-                            $this->outerRadius = $this->innerRadius;
-                            $this->outerNode = $this->innerNode;
-                            $this->innerRadius = 0;
-                            $this->innerNode = null;
-                        }
-                    }
-                }    
             }
         }
     }
