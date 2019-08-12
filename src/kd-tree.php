@@ -36,15 +36,12 @@ interface FaceFinderInterface {
 }
 
 
-class Face implements FaceInterface {
+class Face implements FaceInterface, ArrayAccess {
 
-    protected $id;
-    protected $race;
-    protected $emotion;
-    protected $oldness;
-    protected $left;
-    protected $right;
-    protected $points;
+    protected $left = null;
+    protected $right = null;
+    protected $points = [];
+    protected $container = [];
 
     /**
     * Construct new face.
@@ -54,21 +51,54 @@ class Face implements FaceInterface {
     * @param int $id
     */
     public function __construct(int $race,int $emotion,int $oldness,int $id = 0) {
-        $this->id = $id;
-        $this->race = $race;
-        $this->emotion = $emotion;
-        $this->oldness = $oldness;
-        $this->left = null;
-        $this->right = null;
-        $this->points = [];
+        $this->setId($id);
+        $this->setRace($race);
+        $this->setEmotion($emotion);
+        $this->setOldness($oldness);
     }
-    
+
     /**
     * Set face id.
     * @param int $id
     */
     public function setId(int $id): void {
-        $this->id = $id;
+        if ($id < 0) {
+            throw new RangeException("ID must not be negative");
+        }
+        $this->container[0] = $id;
+    }
+
+    /**
+    * Set race.
+    * @param int $race
+    */
+    protected function setRace(int $race): void {
+        if ($race > 100 || $race < 0) {
+            throw new RangeException("Race must be between 0 and 100");
+        }
+        $this->container[1] = $race;
+    }
+
+    /**
+    * Set emotion.
+    * @param int $emotion
+    */
+    protected function setEmotion(int $emotion): void {
+        if ($emotion > 1000 || $emotion < 0) {
+            throw new RangeException("Emotion must be between 0 and 1000");
+        }
+        $this->container[2] = $emotion;
+    }
+
+    /**
+    * Set oldness.
+    * @param int $oldness
+    */
+    protected function setOldness(int $oldness): void {
+        if ($oldness > 1000 || $oldness < 0) {
+            throw new RangeException("Oldness must be between 0 and 1000");
+        }
+        $this->container[3] = $oldness;
     }
 
     /**
@@ -86,20 +116,55 @@ class Face implements FaceInterface {
     public function setRight(FaceInterface $face): void {
         $this->right = $face;
     }
-    
+
+    /**
+    * Offset set.
+    * @param int $offset
+    * @param mixed $value
+    */
+    public function offsetSet($offset,$value) {
+        if (is_null($offset)) {
+            $this->container[] = $value;
+        } else {
+            $this->container[$offset] = $value;
+        }
+    }
+
+    /**
+    * Offset exists.
+    * @param int $offset
+    * @return boolean
+    */    
+    public function offsetExists($offset) {
+        return isset($this->container[$offset]);
+    }
+
+    /**
+    * Offset unset.
+    * @param int $offset
+    */
+    public function offsetUnset($offset) {
+        unset($this->container[$offset]);
+    }
+
+    /**
+    * Offset get.
+    * @param int $offset
+    * @return mixed
+    */    
+    public function offsetGet($offset) {
+        return isset($this->container[$offset]) ? $this->container[$offset] : null;
+    }
+
     /**
     * Get nth dimension of face.
     * @param int $dim
     * @return int 
     */    
     public function getNthDim(int $dim): int {
-        switch($dim) {
-            case 1: return $this->race;
-            case 2: return $this->emotion;
-            case 3: return $this->oldness;
-        }
+        return $this->container[$dim];
     }
-    
+
     /**
     * Get left node.
     * @return FaceInterface or null
@@ -107,7 +172,7 @@ class Face implements FaceInterface {
     public function getLeft(): ?FaceInterface {
         return $this->left;
     }
-    
+
     /**
     * Get right node.
     * @return FaceInterface or null
@@ -115,7 +180,7 @@ class Face implements FaceInterface {
     public function getRight(): ?FaceInterface {
         return $this->right;
     }
-    
+
     /**
     * Add face into leaf.
     * @param FaceInterface $face
@@ -131,13 +196,13 @@ class Face implements FaceInterface {
     public function getPoints(): array {
         return $this->points;
     }
-    
+
     /**
     * Returns face id or 0, if face is new
     * @return int
     */    
     public function getId(): int {
-        return $this->id;
+        return $this->container[0];
     }
 
     /**
@@ -145,15 +210,15 @@ class Face implements FaceInterface {
     * @return int
     */
     public function getRace(): int {
-        return $this->race;
+        return $this->container[1];
     }
-    
+
     /**
     * Returns face emotion level: from 0 to 1000.
     * @return int
     */
     public function getEmotion(): int {
-        return $this->emotion;
+        return $this->container[2];
     }
 
     /**
@@ -161,7 +226,7 @@ class Face implements FaceInterface {
     * @return int
     */
     public function getOldness(): int {
-        return $this->oldness;
+        return $this->container[3];
     }
 }
 
@@ -172,24 +237,21 @@ class FaceFinder {
     protected $tree;
     protected $face;
     protected $outerNode;
-    protected $innerNode;
     protected $outerRadius;
-    protected $innerRadius;
     protected $nodePoint;
     protected $queue;
-    protected $radiuses;
-    protected $pointsInLeaf;
     protected $mysql;
     const MIN_POINTS = 4;
     const LIMIT = 10000;
     const DIM_COUNT = 3;
+    
     /**
     * Construct FaceFinder.
     * @param String $host
     * @param String $user
     * @param String $password
     */        
-    public function __construct(string $host = 'localhost',string $user = 'root',string $password = '') {
+    public function __construct(string $host = 'localhost',string $user = 'root',string $password = 'X1LfkvrYvFGZ') {
         $this->mysql = $this->connect($host,$user,$password);
         $this->prepareDB();
         $this->data = $this->loadData();
@@ -209,9 +271,20 @@ class FaceFinder {
         if(!$face->getId()) {
             $this->store($face);
         }
-        return $this->getNearestNeighbor($face);
+        $result = $this->getNearestNeighbor($face);
+        $test = $this->getNearestNeighborFromDB($face);
+        return $result;
     }
-
+    
+    /**
+    * Get nearest neighbors from DB
+    * @param FaceInterface $face
+    * @return array
+    */
+    public function getNearestNeighborFromDB(FaceInterface $face): array {
+        return [];
+    }
+    
     /**
     * Removes all faces in DB
     */
@@ -225,7 +298,7 @@ class FaceFinder {
     * Store face in db.
     * @param FaceInterface $face
     */
-    protected function store(FaceInterface $face): void {    
+    protected function store(FaceInterface $face): void {
         $race = $face->getRace();
         $emotion = $face->getEmotion();
         $oldness = $face->getOldness();
@@ -239,7 +312,7 @@ class FaceFinder {
         $this->destroyTree();
         $this->buildTree();
     }
-    
+
     /**
     * Connect to db.
     * @param String $host
@@ -250,10 +323,10 @@ class FaceFinder {
     protected function connect(string $host,string $user,string $password): mysqli {
         return new mysqli($host, $user, $password);
     }
-    
+
     /**
     * Prepare db.
-    */	
+    */    
     protected function prepareDB(): void {
         $this->mysql->multi_query("
             CREATE DATABASE IF NOT EXISTS `face_finder` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
@@ -274,13 +347,12 @@ class FaceFinder {
     * @param FaceInterface $face
     */
     protected function pushToData(FaceInterface $face): void {
-        $data = [$face->getId(),$face->getRace(),$face->getEmotion(),$face->getOldness()];
         if(count($this->data) == self::LIMIT) {
             #отсортируем данные по возрастанию по айди за O(lon(n)), что бы вставить в начало за O(1)
             $this->quickSort($this->data, 0, count($this->data)-1, 0);
-            $this->data[0] = $data;
+            $this->data[0] = $face;
         } else {
-            array_push($this->data,$data);
+            array_push($this->data,$face);
         }
     }
 
@@ -292,7 +364,7 @@ class FaceFinder {
         $data = [];
         if ($result = $this->mysql->query("SELECT `id`, `race`, `emotion`, `oldness` FROM `faces` ORDER BY `id` DESC LIMIT ".self::LIMIT."")) {
             while ($row = $result->fetch_row()) {
-                $data[] = $row;
+                $data[] = new Face($row[1],$row[2],$row[3],$row[0]);
             }
             $result->close();
         }
@@ -357,7 +429,7 @@ class FaceFinder {
         while(($mid > $left) && ($this->data[$mid][$dim] == $this->data[$mid-1][$dim])) {
             $mid--;
         }
-        $face = new Face($this->data[$mid][1],$this->data[$mid][2],$this->data[$mid][3],$this->data[$mid][0]);
+        $face = $this->data[$mid];
         $dim = $dim % self::DIM_COUNT;
         #если мы имеет необходимое количество точек для каждого листа, то можем разбиваться дальше
         if((($mid-$left) > self::MIN_POINTS) && (($right-$mid) > self::MIN_POINTS)) {
@@ -366,12 +438,11 @@ class FaceFinder {
         #иначе кидаем все точки в лист
         } else {
             for($i = $left; $i <= $right; $i++) {
-                $face->addPoint(new Face($this->data[$i][1],$this->data[$i][2],$this->data[$i][3],$this->data[$i][0]));
+                $face->addPoint($this->data[$i]);
             }
         }
         return $face;
     }    
-
 
     /**
     * Build tree recursive withou quick sort.
@@ -388,7 +459,7 @@ class FaceFinder {
         while(($mid>0)&&($data[$mid][$dim] == $data[$mid-1][$dim])) {
             $mid--;
         }
-        $face = new Face($data[$mid][1],$data[$mid][2],$data[$mid][3],$data[$mid][0]);
+        $face = $data[$mid];
         $dim = $dim % self::DIM_COUNT;
         #если мы имеет необходимое количество точек для каждого листа, то можем разбиваться дальше
         if((($mid-1) > self::MIN_POINTS)&&((count($data)-($mid+1)) > self::MIN_POINTS)) {
@@ -397,7 +468,7 @@ class FaceFinder {
         #иначе кидаем все точки в лист
         } else {
             foreach($data as $point) {
-                $face->addPoint(new Face($point[1],$point[2],$point[3],$point[0]));
+                $face->addPoint($point);
             }
         }
         return $face;
@@ -431,27 +502,21 @@ class FaceFinder {
     */    
     protected function getNearestNeighbor(FaceInterface $face): array {
         $this->queue = new SplPriorityQueue();
-        $this->queue->setExtractFlags(SplPriorityQueue::EXTR_DATA);
+        $this->queue->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
         $this->face = $face;
         $return = [];
         #если у нас нет дерева просто соберем все данные в очередь
         if(!$this->tree) {
-            foreach($this->data as $data) {
-                $point = new Face($data[1],$data[2],$data[3],$data[0]);
-                $dist = $this->calculateDist($point);
-                $this->queue->insert($point,$dist);
+            foreach($this->data as $face) {
+                $dist = $this->calculateDist($face);
+                $this->queue->insert($face,$dist);
             }
         } else {
-            $this->innerRadius = -1;
             $this->outerRadius = 0;
-            $this->innerNode = null;
             $this->outerNode = null;    
-            $this->radiuses = new SplPriorityQueue();
-            $this->pointsInLeaf = new SplPriorityQueue();
-            $this->radiuses->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
-            $this->pointsInLeaf->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
             $this->getNearestNeighborRecursive($this->tree);
         }
+        $this->queue->setExtractFlags(SplPriorityQueue::EXTR_DATA);
         while($this->queue->count()) {
             $return[] = $this->queue->extract();
         }
@@ -459,7 +524,7 @@ class FaceFinder {
         if(!count($return) || ($return[count($return)-1]->getId() != $this->face->getId())) {
             $return[] = $this->face;
         }
-        #вернем пять последних элементов в обратном порядке
+        #вернем MIN_POINTS+1 последних элементов в обратном порядке
         return array_reverse(array_slice($return, -(self::MIN_POINTS+1)));
     }
 
@@ -505,7 +570,7 @@ class FaceFinder {
                     $queueData = $this->queue->extract();
                 }
                 $this->outerRadius = $queueData['priority'];
-                $this->outerNode = $queueData['data'];	
+                $this->outerNode = $queueData['data'];    
             } else {
                 $tree->addPoint($this->nodePoint);
                 foreach($tree->getPoints() as $point) {
