@@ -251,7 +251,7 @@ class FaceFinder {
     * @param String $user
     * @param String $password
     */        
-    public function __construct(string $host = 'localhost',string $user = 'root',string $password = 'X1LfkvrYvFGZ') {
+    public function __construct(string $host = 'localhost',string $user = 'root',string $password = '') {
         $this->mysql = $this->connect($host,$user,$password);
         $this->prepareDB();
         $this->data = $this->loadData();
