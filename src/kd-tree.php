@@ -103,17 +103,17 @@ class Face implements FaceInterface, ArrayAccess {
 
     /**
     * Set left node.
-    * @param FaceInterface $face
+    * @param Face $face
     */        
-    public function setLeft(FaceInterface $face): void {
+    public function setLeft(Face $face): void {
         $this->left = $face;
     }
 
     /**
     * Set right node.
-    * @param FaceInterface $face
+    * @param Face $face
     */        
-    public function setRight(FaceInterface $face): void {
+    public function setRight(Face $face): void {
         $this->right = $face;
     }
 
@@ -167,25 +167,25 @@ class Face implements FaceInterface, ArrayAccess {
 
     /**
     * Get left node.
-    * @return FaceInterface or null
+    * @return Face or null
     */        
-    public function getLeft(): ?FaceInterface {
+    public function getLeft(): ?Face {
         return $this->left;
     }
 
     /**
     * Get right node.
-    * @return FaceInterface or null
+    * @return Face or null
     */    
-    public function getRight(): ?FaceInterface {
+    public function getRight(): ?Face {
         return $this->right;
     }
 
     /**
     * Add face into leaf.
-    * @param FaceInterface $face
+    * @param Face $face
     */        
-    public function addPoint(FaceInterface $face): void {
+    public function addPoint(Face $face): void {
         $this->points[] = $face;
     }
 
@@ -231,7 +231,7 @@ class Face implements FaceInterface, ArrayAccess {
 }
 
 
-class FaceFinder {
+class FaceFinder implements FaceFinderInterface {
 
     protected $data;
     protected $tree;
@@ -268,6 +268,7 @@ class FaceFinder {
     * including the searched one
     */
     public function resolve(FaceInterface $face): array {
+        $face = new Face($face->getRace(),$face->getEmotion(),$face->getOldness(),$face->getId());
         if(!$face->getId()) {
             $this->store($face);
         }
@@ -278,10 +279,10 @@ class FaceFinder {
     
     /**
     * Get nearest neighbors from DB
-    * @param FaceInterface $face
+    * @param Face $face
     * @return array
     */
-    public function getNearestNeighborFromDB(FaceInterface $face): array {
+    public function getNearestNeighborFromDB(Face $face): array {
         return [];
     }
     
@@ -296,9 +297,9 @@ class FaceFinder {
 
     /**
     * Store face in db.
-    * @param FaceInterface $face
+    * @param Face $face
     */
-    protected function store(FaceInterface $face): void {
+    protected function store(Face $face): void {
         $race = $face->getRace();
         $emotion = $face->getEmotion();
         $oldness = $face->getOldness();
@@ -344,9 +345,9 @@ class FaceFinder {
 
     /**
     * Push face to data array.
-    * @param FaceInterface $face
+    * @param Face $face
     */
-    protected function pushToData(FaceInterface $face): void {
+    protected function pushToData(Face $face): void {
         if(count($this->data) == self::LIMIT) {
             #отсортируем данные по возрастанию по айди за O(lon(n)), что бы вставить в начало за O(1)
             $this->quickSort($this->data, 0, count($this->data)-1, 0);
@@ -420,9 +421,9 @@ class FaceFinder {
     * @param int $dim
     * @param int $left
     * @param int $right
-    * @return FaceInterface
+    * @return Face
     */
-    protected function buildTreeRecursive(int $dim, int $left, int $right): FaceInterface {
+    protected function buildTreeRecursive(int $dim, int $left, int $right): Face {
         $dim++;
         $this->quickSort($this->data, $left, $right, $dim);
         $mid = round(($left + $right) / 2);
@@ -448,9 +449,9 @@ class FaceFinder {
     * Build tree recursive withou quick sort.
     * @param array $data
     * @param int $dim
-    * @return FaceInterface
+    * @return Face
     */
-    protected function buildTreeRecursiveWithouQuickSort(array $data, int $dim): FaceInterface {
+    protected function buildTreeRecursiveWithouQuickSort(array $data, int $dim): Face {
         $dim++;
         usort($data,function ($a, $b) use ($dim) {
             return $a[$dim] <=> $b[$dim];
@@ -497,10 +498,10 @@ class FaceFinder {
 
     /**
     * Get nearest neighbors
-    * @param FaceInterface $face
+    * @param Face $face
     * @return array
     */    
-    protected function getNearestNeighbor(FaceInterface $face): array {
+    protected function getNearestNeighbor(Face $face): array {
         $this->queue = new SplPriorityQueue();
         $this->queue->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
         $this->face = $face;
@@ -539,12 +540,12 @@ class FaceFinder {
 
     /**
     * Get nearest neighbors recursive
-    * @param FaceInterface $tree
+    * @param Face $tree
     * @param int $dim
     */    
-    protected function getNearestNeighborRecursive(FaceInterface $tree,int $dim = 0): void {
+    protected function getNearestNeighborRecursive(Face $tree,int $dim = 0): void {
         $dim++;
-        if($this->face->getNthDim($dim) >= $tree->getNthDim($dim)) {
+        if($this->face[$dim] >= $tree[$dim]) {
             $first = $tree->getRight();
             $second = $tree->getLeft();
         } else {
@@ -553,10 +554,10 @@ class FaceFinder {
         }
         if($first) {
             $this->getNearestNeighborRecursive($first,$dim%self::DIM_COUNT);
-            $distToSplitterObject = ($tree->getNthDim($dim) - $this->face->getNthDim($dim))**2;
+            $distToSplitterObject = ($tree[$dim] - $this->face[$dim])**2;
             #если внешний радиус пересекает объект разбиения пространства, 
             #то нам нужно посмотреть с другой стороны
-            if(($this->outerRadius > $distToSplitterObject) && $second) {    
+            if(($this->outerRadius > $distToSplitterObject) && $second) {
                 $this->nodePoint = $tree;
                 $this->getNearestNeighborRecursive($second,$dim%self::DIM_COUNT);
             }
